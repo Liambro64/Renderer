@@ -9,6 +9,10 @@ int main()
 
 	Vector2 screenSize = {800, 600};
 
+	Rasterizer basicRasterizer = Rasterizer();
+	WireframeRasterizer wireframeRasterizer = WireframeRasterizer();
+	FilledWireframeRasterizer filledWireframeRasterizer = FilledWireframeRasterizer();
+
 	Object cube({ //verticies
 		{-1.0f, -1.0f,  1.0f}, // 0: Front-Bottom-Left
     	{ 1.0f, -1.0f,  1.0f}, // 1: Front-Bottom-Right
@@ -26,7 +30,7 @@ int main()
     	{4, 0, 3}, {4, 3, 7}, // Top Face (y = 1)
     	{3, 2, 6}, {3, 6, 7}, // Bottom Face (y = 0)
     	{4, 5, 1}, {4, 1, 0}  // Front Face (z = 1)
-	}, {0, 0, -5}, {1, 0, 0, 0}, {1, 1, 1}, 0x0000FF00, 0x00000000);
+	}, {0, 0, -5}, {1, 0, 0, 0}, {1, 1, 1}, 0x0000FF00, 0x00000000, &basicRasterizer);
 
 	Object cube2({ //verticies
 		{-1.0f, -1.0f,  1.0f}, // 0: Front-Bottom-Left
@@ -45,7 +49,7 @@ int main()
     	{4, 0, 3}, {4, 3, 7}, // Top Face (y = 1)
     	{3, 2, 6}, {3, 6, 7}, // Bottom Face (y = 0)
     	{4, 5, 1}, {4, 1, 0}  // Front Face (z = 1)
-	}, {0, 2.5, -5}, {1, 0, 0, 0}, {1, 1, 1}, 0x00FF0000, 0x00000000); 
+	}, {0, 2.5, -5}, {1, 0, 0, 0}, {1, 1, 1}, 0x00FF0000, 0x00000000, &wireframeRasterizer); 
 
 	Object cube3({ //verticies
 		{-1.0f, -1.0f,  1.0f}, // 0: Front-Bottom-Left
@@ -64,7 +68,7 @@ int main()
     	{4, 0, 3}, {4, 3, 7}, // Top Face (y = 1)
     	{3, 2, 6}, {3, 6, 7}, // Bottom Face (y = 0)
     	{4, 5, 1}, {4, 1, 0}  // Front Face (z = 1)
-	}, {0, -2.5, -5}, {1, 0, 0, 0}, {1, 1, 1}, 0x000000FF, 0x00000000); 
+	}, {0, -2.5, -5}, {1, 0, 0, 0}, {1, 1, 1}, 0x000000FF, 0x00000000, &filledWireframeRasterizer); 
 	Renderer renderer(position, rotation, {}, FOVradians, screenSize);
 
 	renderer.addObject(cube);

@@ -11,6 +11,7 @@ class Renderer
 private:
 	std::vector<uint32_t> buffer;
 	std::vector<float> zBuffer;
+	Rasterizer baseRasterizer;
 public:
 	Vector3 cameraPosition;
 	float cameraPitch;
@@ -37,6 +38,7 @@ public:
 	void ScreenResize(int w, int h);
 
 	const std::vector<uint32_t>& Render();
+	const std::vector<uint32_t>& OldRender();
 	const std::vector<uint32_t>& RenderWireframe();
 	const std::vector<uint32_t>& RenderWithWireframe(float outlineFraction = 2.0f);
 	void drawLine(Vector2 start, Vector2 end, uint32_t color);

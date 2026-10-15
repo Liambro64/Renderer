@@ -5,6 +5,11 @@ WireframeRasterizer::WireframeRasterizer(std::vector<uint32_t> &buffer, std::vec
 {
 }
 
+WireframeRasterizer::WireframeRasterizer()
+	: Rasterizer()
+{
+}
+
 WireframeRasterizer::~WireframeRasterizer()
 {
 }

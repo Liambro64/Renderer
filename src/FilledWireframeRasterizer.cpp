@@ -4,10 +4,17 @@ FilledWireframeRasterizer::FilledWireframeRasterizer(std::vector<uint32_t> &buff
 	: Rasterizer(buffer, zBuffer)
 {
 }
-
-void FilledWireframeRasterizer::Rasterize(int minX, int maxX, int minY, int maxY, const Vector2 deltas0, const Vector2 deltas1, const Vector2 deltas2, const Vector3 iz, const Vector2 &projectedA, const Vector2 &projectedB, const Vector2 &projectedC, const Vector2 &screen, const Object &object, const Vector3 &inverseLength, const float triangleOutlinePixels)
+FilledWireframeRasterizer::FilledWireframeRasterizer()
+	: Rasterizer()
+{
+}
+void FilledWireframeRasterizer::Rasterize(int minX, int maxX, int minY, int maxY, const Vector3 iz, const Vector2 &projectedA, const Vector2 &projectedB, const Vector2 &projectedC, const Vector2 &screen, const Object &object, const Vector3 &inverseLength, const float triangleOutlinePixels)
 {
 
+	// compute the edge deltas for the triangle for rasterization
+	auto [dx0, dy0] = Deltas(projectedC, projectedB);
+	auto [dx1, dy1] = Deltas(projectedA, projectedC);
+	auto [dx2, dy2] = Deltas(projectedB, projectedA);
 	const Vector2 start = {minX + 0.5f, minY + 0.5f};
 	float rowE0 = determinant(projectedB, projectedC, start);
 	float rowE1 = determinant(projectedC, projectedA, start);
@@ -36,13 +43,13 @@ void FilledWireframeRasterizer::Rasterize(int minX, int maxX, int minY, int maxY
 					depthRow[x] = depth;
 				}
 			}
-			e0 += deltas0.x;
-			e1 += deltas1.x;
-			e2 += deltas2.x;
+			e0 += dx0;
+			e1 += dx1;
+			e2 += dx2;
 		}
-		rowE0 += deltas0.y;
-		rowE1 += deltas1.y;
-		rowE2 += deltas2.y;
+		rowE0 += dy0;
+		rowE1 += dy1;
+		rowE2 += dy2;
 	}
 }
 
@@ -56,8 +63,10 @@ void FilledWireframeRasterizer::Render(const Vector2 &screen, const Vector3 &cam
 	Vector3 cameraSpaceA = CameraTranslation(cameraPosition, cameraRotation, object, object.vertices[triangle.a]);
 	Vector3 cameraSpaceB = CameraTranslation(cameraPosition, cameraRotation, object, object.vertices[triangle.b]);
 	Vector3 cameraSpaceC = CameraTranslation(cameraPosition, cameraRotation, object, object.vertices[triangle.c]);
+
 	// after this, you can change the change the math between camera space and projected space
 	Vector2 projectedA, projectedB, projectedC;
+
 	// does 2 things: checks if the point is in the view of the camera and projects it to 2D screen space
 	if (!ProjectCameraSpacePointTo2D(cameraSpaceA, fovYRadians, screen, projectedA) ||
 		!ProjectCameraSpacePointTo2D(cameraSpaceB, fovYRadians, screen, projectedB) ||
@@ -69,18 +78,17 @@ void FilledWireframeRasterizer::Render(const Vector2 &screen, const Vector3 &cam
 
 	// find the area of the triangle and change the winding order if necessary
 	float area = determinant(projectedA, projectedB, projectedC);
-	ChangeWindingOrder(projectedA, projectedB, projectedC, cameraSpaceA, cameraSpaceB, area);
+	ChangeWindingOrder(projectedA, projectedB, projectedC, cameraSpaceB, cameraSpaceC, area);
+
 	// computes the bounding box of the triangle and clamps it to the screen.
 	int minX, maxX, minY, maxY;
 	BoundingBox(projectedA, projectedB, projectedC, minX, maxX, minY, maxY);
 	ScreenClamp(minX, maxX, minY, maxY, screen);
-	if (minX > maxX || minY > maxY)
+	if (area <= 0 || minX > maxX || minY > maxY)
 		return;
 	float inverseArea = 1.0f / area;
-	// compute the edge deltas for the triangle for rasterization
-	auto [dx0, dy0] = Deltas(projectedB, projectedC);
-	auto [dx1, dy1] = Deltas(projectedA, projectedC);
-	auto [dx2, dy2] = Deltas(projectedB, projectedA);
+
+
 	// compute the inverse depth for each vertex for perspective-correct interpolation
 	const float izA = inverseArea / -cameraSpaceA.z;
 	const float izB = inverseArea / -cameraSpaceB.z;
@@ -99,7 +107,7 @@ void FilledWireframeRasterizer::Render(const Vector2 &screen, const Vector3 &cam
 		0.2f * minimumTriangleAltitude;
 
 	// call the rasterization function
-	Rasterize(minX, maxX, minY, maxY, {dx0, dy0}, {dx1, dy1}, {dx2, dy2}, {izA, izB, izC}, projectedA, projectedB, projectedC, screen, object, {invLengthBC, invLengthCA, invLengthAB}, triangleOutlinePixels);
+	Rasterize(minX, maxX, minY, maxY, {izA, izB, izC}, projectedA, projectedB, projectedC, screen, object, {invLengthBC, invLengthCA, invLengthAB}, triangleOutlinePixels);
 }
 
 FilledWireframeRasterizer::~FilledWireframeRasterizer()

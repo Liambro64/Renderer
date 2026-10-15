@@ -24,20 +24,20 @@ bool Rasterizer::BackfaceCulling(const Vector3 &cameraPosition, const Vector3 &A
 
 Vector3 Rasterizer::CameraTranslation(const Vector3 &cameraPosition, const Quaternion &cameraRotation, const Object &object,const Vector3 &point)
 {
-	return cameraRotation * (cameraPosition - (object.scale * (object.rotation * point) + object.position));
+	return cameraRotation * (object.rotation * (point * object.scale) + object.position - cameraPosition);
 }
 
 bool Rasterizer::ProjectCameraSpacePointTo2D(const Vector3 &cameraSpace, float fovYRadians, const Vector2 &screen, Vector2 &projected)
 {
-	if (cameraSpace.z <= 0)
+	if (cameraSpace.z >= 0.0f)
 		return false;
 	float aspectRatio = screen.x / screen.y;
-	float f = 1.0f / tan(fovYRadians / 2.0f);
-	float fx = f / aspectRatio;
+	float fLenY = 1.0f / tan(fovYRadians / 2.0f);
+	float fLenX = fLenY / aspectRatio;
 	float depth = -cameraSpace.z;
 
-	float ndcX = (cameraSpace.x * fx) / depth;
-	float ndcY = (cameraSpace.y * f) / depth;
+	float ndcX = (cameraSpace.x * fLenX) / depth;
+	float ndcY = (cameraSpace.y * fLenY) / depth;
 
 	projected.x = (ndcX + 1.0f) * 0.5f * screen.x;
 	projected.y = (1.0f - ndcY) * 0.5f * screen.y;
@@ -46,15 +46,15 @@ bool Rasterizer::ProjectCameraSpacePointTo2D(const Vector3 &cameraSpace, float f
 
 float Rasterizer::determinant(const Vector2 &a, const Vector2 &b, const Vector2 &p)
 {
-	return (a.x - p.x) * (b.y - p.y) - (a.y - p.y) * (b.x - p.x);
+	return (b.x - a.x) * (p.y - a.y) - (b.y - a.y) * (p.x - a.x);
 }
 
-void Rasterizer::ChangeWindingOrder(Vector2 &a, Vector2 &b, Vector2 &c, Vector3 &cameraSpaceA, Vector3 &cameraSpaceB, float &area)
+void Rasterizer::ChangeWindingOrder(Vector2 &a, Vector2 &b, Vector2 &c, Vector3 &cameraSpaceB, Vector3 &cameraSpaceC, float &area)
 {
 	if (area < 0)
 	{
-		std::swap(a, c);
-		std::swap(cameraSpaceA, cameraSpaceB);
+		std::swap(b, c);
+		std::swap(cameraSpaceB, cameraSpaceC);
 		area = -area;
 	}
 }
@@ -75,12 +75,15 @@ void Rasterizer::ScreenClamp(int &minX, int &maxX, int &minY, int &maxY, const V
 
 Vector2 Rasterizer::Deltas(const Vector2 &a, const Vector2 &b)
 {
-	return Vector2{-(a.x - b.x), (a.y - b.y)};
+	return Vector2{-(a.y - b.y), (a.x - b.x)};
 }
 
-void Rasterizer::Rasterize(int minX, int maxX, int minY, int maxY, const Vector2 deltas0, const Vector2 deltas1, const Vector2 deltas2, const Vector3 iz, const Vector2 &projectedA, const Vector2 &projectedB, const Vector2 &projectedC, const Vector2 &screen, const Object &object)
+void Rasterizer::Rasterize(int minX, int maxX, int minY, int maxY, const Vector3 iz, const Vector2 &projectedA, const Vector2 &projectedB, const Vector2 &projectedC, const Vector2 &screen, const Object &object)
 {
-
+	// compute the edge deltas for the triangle for rasterization
+	auto [dx0, dy0] = Deltas(projectedC, projectedB);
+	auto [dx1, dy1] = Deltas(projectedA, projectedC);
+	auto [dx2, dy2] = Deltas(projectedB, projectedA);
 	const Vector2 start = {minX + 0.5f, minY + 0.5f};
 	float rowE0 = determinant(projectedB, projectedC, start);
 	float rowE1 = determinant(projectedC, projectedA, start);
@@ -107,14 +110,14 @@ void Rasterizer::Rasterize(int minX, int maxX, int minY, int maxY, const Vector2
 				}
 			}
 			// step edge functions to the next pixel in the row
-			e0 += deltas0.x;
-			e1 += deltas1.x;
-			e2 += deltas2.x;
+			e0 += dx0;
+			e1 += dx1;
+			e2 += dx2;
 		}
 		// step edge functions to the next row
-		rowE0 += deltas0.y;
-		rowE1 += deltas1.y;
-		rowE2 += deltas2.y;
+		rowE0 += dy0;
+		rowE1 += dy1;
+		rowE2 += dy2;
 	}
 }
 
@@ -144,20 +147,16 @@ void Rasterizer::Render(const Vector2 &screen, const Vector3 &cameraPosition, co
 
 	// find the area of the triangle and change the winding order if necessary
 	float area = determinant(projectedA, projectedB, projectedC);
-	ChangeWindingOrder(projectedA, projectedB, projectedC, cameraSpaceA, cameraSpaceB, area);
+	ChangeWindingOrder(projectedA, projectedB, projectedC, cameraSpaceB, cameraSpaceC, area);
 
 	// computes the bounding box of the triangle and clamps it to the screen.
 	int minX, maxX, minY, maxY;
 	BoundingBox(projectedA, projectedB, projectedC, minX, maxX, minY, maxY);
 	ScreenClamp(minX, maxX, minY, maxY, screen);
-	if (minX > maxX || minY > maxY)
+	if (area <= 0 || minX > maxX || minY > maxY)
 		return;
 	float inverseArea = 1.0f / area;
 
-	// compute the edge deltas for the triangle for rasterization
-	auto [dx0, dy0] = Deltas(projectedB, projectedC);
-	auto [dx1, dy1] = Deltas(projectedA, projectedC);
-	auto [dx2, dy2] = Deltas(projectedB, projectedA);
 
 	// compute the inverse depth for each vertex for perspective-correct interpolation
 	const float izA = inverseArea / -cameraSpaceA.z;
@@ -165,7 +164,7 @@ void Rasterizer::Render(const Vector2 &screen, const Vector3 &cameraPosition, co
 	const float izC = inverseArea / -cameraSpaceC.z;
 
 	// call the rasterization function
-	Rasterize(minX, maxX, minY, maxY, {dx0, dy0}, {dx1, dy1}, {dx2, dy2}, {izA, izB, izC}, projectedA, projectedB, projectedC, screen, object);
+	Rasterize(minX, maxX, minY, maxY, {izA, izB, izC}, projectedA, projectedB, projectedC, screen, object);
 }
 
 Rasterizer::~Rasterizer()

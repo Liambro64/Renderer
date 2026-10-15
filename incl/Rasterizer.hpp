@@ -23,7 +23,7 @@ public:
 	void BoundingBox(const Vector2 &a, const Vector2 &b, const Vector2 &c, int &minX, int &maxX, int &minY, int &maxY);
 	void ScreenClamp(int &minX, int &maxX, int &minY, int &maxY, const Vector2 &screen);
 	Vector2 Deltas(const Vector2 &a, const Vector2 &b);
-	virtual void Rasterize(int minX, int maxX, int minY, int maxY, const Vector2 deltas0, const Vector2 deltas1, const Vector2 deltas2, const Vector3 iz, const Vector2 &projectedA, const Vector2 &projectedB, const Vector2 &projectedC, const Vector2 &screen, const Object &object);
+	virtual void Rasterize(int minX, int maxX, int minY, int maxY, const Vector3 iz, const Vector2 &projectedA, const Vector2 &projectedB, const Vector2 &projectedC, const Vector2 &screen, const Object &object);
 	virtual void Render(const Vector2 &screen, const Vector3 &cameraPosition, const Quaternion &cameraRotation, const Object &object, const Triangle &triangle, float fovYRadians);
 };
 

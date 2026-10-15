@@ -87,7 +87,7 @@ const std::vector<uint32_t> &WindowManager::Render()
 {
 	// m_renderer->RenderTo(*this);
 
-	return m_renderer->RenderWithWireframe();
+	return m_renderer->Render();
 }
 
 void WindowManager::ShowBuffer(const std::vector<uint32_t> &buffer)

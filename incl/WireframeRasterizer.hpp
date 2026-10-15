@@ -8,6 +8,7 @@ class WireframeRasterizer : public Rasterizer
 {
 public:
 	WireframeRasterizer(std::vector<uint32_t> &buffer, std::vector<float> &zBuffer);
+	WireframeRasterizer();
 	~WireframeRasterizer();
 
 	void drawLineWithDepth(Vector2 start, Vector2 end, float z0, float z1, uint32_t color, const Vector2 &screen);
